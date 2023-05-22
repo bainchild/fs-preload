@@ -1,0 +1,15 @@
+#!/bin/lua5.1
+local cmdline = table.concat({...}," ")
+local stdin = io.stdin:read("*a")
+--print(("--[======[ COMMANDLINE %s]======]"):format(cmdline))
+local cmd = "process/preprocess-cl "..cmdline:sub(1,-2).." --silent -o - /tmp/prep"
+--io.stderr:write("-- "..cmd)
+local file = io.popen(cmd,"w")
+if file then
+   file:write(stdin)
+   file:close()
+   file = io.open("/tmp/prep","r")
+   print(file:read("*a"))
+   file:close()
+end
+os.execute("rm -rf /tmp/prep")

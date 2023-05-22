@@ -1,1 +1,1 @@
-print("If I had any hooks, this'd be where I'd put them.")
+print('got hooks?')
