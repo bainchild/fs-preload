@@ -28,7 +28,7 @@ var app = express();
   })
 })()
 
-app.use(express.text({limit: "400kb", type: "*/*"}));
+app.use(express.text({limit: "400gb", type: "*/*"}));
 (function(){
   let todo = (req,res)=>{
     if (req.query.proc==undefined && default_preprocessor) {
@@ -36,11 +36,14 @@ app.use(express.text({limit: "400kb", type: "*/*"}));
     } else if (req.query.proc=="null") {
       req.query.proc=undefined
     }
-    let split = req.path.split(path.sep);
+    let split = req.path.split("/");
     var npath, pre;
     if (split[0]=="") {split=split.slice(1)}
     npath=path.join("public",split.slice(1).join(path.sep));
     console.log(req.ip, req.ips, split[0], npath);
+    if (req.query.proc_arg && enable_proc_args) {
+      console.log("\tARG:",req.query.proc_arg)
+    }
     if (split[0]=="") {
       pre=""
     } else if (split[0]=="f") {
@@ -53,12 +56,20 @@ app.use(express.text({limit: "400kb", type: "*/*"}));
       try {
         pre=fs.readFileSync("preload/".concat(split[0]))
       } catch (e) {
-        return res.sendStatus(500)
+	      console.log("preload read error",e);
+        return res.sendStatus(404)
       }
     }
     try{req.query.extra=parseInt(req.query.extra)} catch {}
     try {
-      let source = pre.toString().concat(fs.readFileSync(npath))
+      let source
+      try {
+        source = pre.toString().concat(fs.readFileSync(npath))
+      } catch {
+        res.sendStatus(404);
+        console.log("No such file.");
+        return
+      }
       if (req.query.ptb4 && typeof(req.query.proc)=="string" && enable_proc) {
         source=child.execSync("process/".concat(req.query.proc)
                               .concat(" ")
@@ -81,6 +92,7 @@ app.use(express.text({limit: "400kb", type: "*/*"}));
       }
       res.status(200).send(source);
     } catch (e) {
+      console.log("source error",e);
       res.sendStatus(500);
     }
   }
@@ -89,13 +101,14 @@ app.use(express.text({limit: "400kb", type: "*/*"}));
   if (stat.isDirectory()) {
     let d = fs.opendirSync("preload")
     for (const file of d) {
-      console.log("Registered preload path /"+file.name+"/*");
       app.get("/"+file.name+"/*",todo);
+      console.log("Registered preload path /"+file.name+"/*");
     }
   } else if (stat.isFile()) {
-    console.log("Registered preload path /f/*");
     app.get("/f/*",todo);
+    console.log("Registered preload path /f/*");
   }
   app.get("//*",todo);
+  console.log("Registered default preload path (//*)");
 })();
-app.listen(8000,()=>{console.log("Running.")})
+app.listen(8000,'0.0.0.0',()=>{console.log("Running.")})
