@@ -1,7 +1,7 @@
-public/*
-extra/*
-preload/*
-process/*
+public
+extra
+preload
+process
 node_modules
 package-lock.json
 hostname_url.txt
